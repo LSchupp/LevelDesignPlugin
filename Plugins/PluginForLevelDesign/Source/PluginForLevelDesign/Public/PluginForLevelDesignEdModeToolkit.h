@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Toolkits/BaseToolkit.h"
+#include "DetailLayoutBuilder.h"
+#include "Framework/SlateDelegates.h"
 
 enum PivotType
 {
@@ -37,7 +39,7 @@ enum PivotType
 	RESET,
 };
 
-enum AxeToRandom
+enum Axe
 {
 	AXE_X,
 	AXE_Y,
@@ -74,9 +76,29 @@ public:
 	virtual class FEdMode* GetEditorMode() const override;
 	virtual TSharedPtr<class SWidget> GetInlineContent() const override { return ToolkitWidget; }
 
-	UPROPERTY(Category = "Pivot", EditAnywhere, NonTransactional, meta = (DisplayName = "Change layer pivot", ToolTip = "Pivot", ShowForTools = "LevelDesign"))
-		bool bCanHaveLayersContent = false;
+	UPROPERTY(EditAnywhere)
+	float Float_Scale = 0;
+
+	UFUNCTION(BlueprintCallable)
+	void ChangeValueScale(float _Value);	
+	
+	UPROPERTY(EditAnywhere)
+	float Float_MinRot = 0;
+
+	UFUNCTION(BlueprintCallable)
+		void ChangeValueMinRot(float _Value);	
+	
+	UPROPERTY(EditAnywhere)
+		float Float_MaxRot = 360;
+
+	UFUNCTION(BlueprintCallable)
+		void ChangeValueMaxRot(float _Value);
+
+	 
+protected:
+
 private:
 
 	TSharedPtr<SWidget> ToolkitWidget;
 };
+

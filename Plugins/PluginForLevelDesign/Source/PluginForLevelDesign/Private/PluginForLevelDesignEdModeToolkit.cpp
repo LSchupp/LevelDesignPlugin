@@ -5,11 +5,15 @@
 #include "Engine/Selection.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Text/STextBlock.h"
+#include "Widgets/Input/SNumericEntryBox.h"
 #include "EditorModeManager.h"
 #include <Engine/Engine.h>
 #include "Containers/UnrealString.h"
 #include "Engine/World.h"
 #include "Editor/EditorEngine.h"
+#include "PropertyHandle.h"
+#include "Components/SlateWrapperTypes.h"
+
 
 
 #define LOCTEXT_NAMESPACE "FPluginForLevelDesignEdModeToolkit"
@@ -19,6 +23,7 @@
 
 FPluginForLevelDesignEdModeToolkit::FPluginForLevelDesignEdModeToolkit()
 {
+
 }
 
 void FPluginForLevelDesignEdModeToolkit::Init(const TSharedPtr<IToolkitHost>& InitToolkitHost)
@@ -62,7 +67,7 @@ void FPluginForLevelDesignEdModeToolkit::Init(const TSharedPtr<IToolkitHost>& In
 					}
 					else
 					{
-						GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, "No static mesh component found");
+						GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Blue, "No static mesh component found");
 						GEditor->EndTransaction();
 						return FReply::Handled();
 					}
@@ -221,7 +226,7 @@ void FPluginForLevelDesignEdModeToolkit::Init(const TSharedPtr<IToolkitHost>& In
 				.Text(InLabel)
 				.OnClicked_Static(&Locals::OnButtonClick, pivot);
 		}
-		static FReply OnButtonClickRandom(AxeToRandom _axe)
+		static FReply OnButtonClickRandom(Axe _axe, FPluginForLevelDesignEdModeToolkit* plugin)
 		{
 			USelection* SelectedActors = GEditor->GetSelectedActors();
 
@@ -240,19 +245,19 @@ void FPluginForLevelDesignEdModeToolkit::Init(const TSharedPtr<IToolkitHost>& In
 					switch (_axe)
 					{
 					case AXE_X:
-						LevelActor->SetActorRotation(FRotator(LevelActor->GetActorRotation().Euler().Y, LevelActor->GetActorRotation().Euler().Z, rand() % 360));
+						LevelActor->SetActorRotation(FRotator(LevelActor->GetActorRotation().Euler().Y, LevelActor->GetActorRotation().Euler().Z, rand() %(int) (plugin->Float_MaxRot- plugin->Float_MinRot) + plugin->Float_MinRot));
 						//LevelActor->SetActorRotation(FQuat(LevelActor->GetActorRightVector(),180-rand()%360));
 						break;
 					case AXE_Y:
 						//LevelActor->SetActorRotation(FQuat(LevelActor->GetActorForwardVector(),180-rand()%360));
-						LevelActor->SetActorRotation(FRotator(rand() % 360, LevelActor->GetActorRotation().Euler().Z, LevelActor->GetActorRotation().Euler().X));
+						LevelActor->SetActorRotation(FRotator(rand() % (int)(plugin->Float_MaxRot - plugin->Float_MinRot) + plugin->Float_MinRot, LevelActor->GetActorRotation().Euler().Z, LevelActor->GetActorRotation().Euler().X));
 						break;
 					case AXE_Z:
 						//LevelActor->SetActorRotation(FQuat(LevelActor->GetActorForwardVector(),180-rand()%360));
-						LevelActor->SetActorRotation(FRotator(LevelActor->GetActorRotation().Euler().Y, rand() % 360, LevelActor->GetActorRotation().Euler().X));
+						LevelActor->SetActorRotation(FRotator(LevelActor->GetActorRotation().Euler().Y, rand() % (int)(plugin->Float_MaxRot - plugin->Float_MinRot) + plugin->Float_MinRot, LevelActor->GetActorRotation().Euler().X));
 						break;
 					case ALL_AXE:
-						LevelActor->SetActorRotation(FRotator(rand() % 360,rand() % 360, rand() % 360));
+						LevelActor->SetActorRotation(FRotator(rand() % 360, rand() % 360, rand() % (int)(plugin->Float_MaxRot - plugin->Float_MinRot) + plugin->Float_MinRot));
 						break;
 					case RESET_X:
 						LevelActor->SetActorRotation(FRotator(LevelActor->GetActorRotation().Euler().Y, LevelActor->GetActorRotation().Euler().Z, 0));
@@ -298,7 +303,7 @@ void FPluginForLevelDesignEdModeToolkit::Init(const TSharedPtr<IToolkitHost>& In
 					secondActor = Cast<AActor>(*Iter);
 					nbActor++;
 				}
-				else if ( nbActor >= 2 && Cast<AActor>(*Iter))
+				else if (nbActor >= 2 && Cast<AActor>(*Iter))
 				{
 					nbActor++;
 				}
@@ -308,11 +313,11 @@ void FPluginForLevelDesignEdModeToolkit::Init(const TSharedPtr<IToolkitHost>& In
 			{
 				if (nbActor < 2)
 				{
-					GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, "Only one actor selectioned");
+					GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Blue, "Only one actor selectioned");
 				}
 				else if (nbActor > 2)
 				{
-					GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, "More than two actors selectioned");
+					GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Blue, "More than two actors selectioned");
 				}
 				GEditor->EndTransaction();
 				return FReply::Handled();
@@ -378,7 +383,7 @@ void FPluginForLevelDesignEdModeToolkit::Init(const TSharedPtr<IToolkitHost>& In
 					}
 					else
 					{
-						GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, "No static mesh component found");
+						GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Blue, "No static mesh component found");
 						GEditor->EndTransaction();
 						return FReply::Handled();
 					}
@@ -392,11 +397,67 @@ void FPluginForLevelDesignEdModeToolkit::Init(const TSharedPtr<IToolkitHost>& In
 			return FReply::Handled();
 		}
 
-		static TSharedRef<SWidget> MakeButtonRandom(FText InLabel, const AxeToRandom axe)
+		static FReply OnButtonClickScale(Axe _scale, FPluginForLevelDesignEdModeToolkit* plugin)
+		{
+			USelection* SelectedActors = GEditor->GetSelectedActors();
+
+			// Let editor know that we're about to do something that we want to undo/redo
+			GEditor->BeginTransaction(LOCTEXT("ChangeRotationTransactionName", "Change Rotation"));
+
+			// For each selected actor
+			for (FSelectionIterator Iter(*SelectedActors); Iter; ++Iter)
+			{
+				if (AActor* LevelActor = Cast<AActor>(*Iter))
+				{
+					LevelActor->Modify();
+					FVector temp = LevelActor->GetActorRotation().Euler();
+					//LevelActor->offset
+					//Y,Z,X
+					float tempRand = (rand() / (float)RAND_MAX) * 10.f;
+					switch (_scale)
+					{
+					case AXE_X:
+						LevelActor->SetActorScale3D(FVector(plugin->Float_Scale, LevelActor->GetActorScale3D().Y, LevelActor->GetActorScale3D().Z));
+						//LevelActor->SetActorRotation(FQuat(LevelActor->GetActorRightVector(),180-rand()%360));
+						break;
+					case AXE_Y:
+						//LevelActor->SetActorRotation(FQuat(LevelActor->GetActorForwardVector(),180-rand()%360));
+						LevelActor->SetActorScale3D(FVector(LevelActor->GetActorScale3D().X, plugin->Float_Scale, LevelActor->GetActorScale3D().Z));
+						break;
+					case AXE_Z:
+						//LevelActor->SetActorRotation(FQuat(LevelActor->GetActorForwardVector(),180-rand()%360));
+						LevelActor->SetActorScale3D(FVector(LevelActor->GetActorScale3D().X, LevelActor->GetActorScale3D().Y, plugin->Float_Scale));
+						break;
+					case ALL_AXE:
+						LevelActor->SetActorScale3D(FVector(plugin->Float_Scale, plugin->Float_Scale, plugin->Float_Scale));
+						break;
+					case RESET_X:
+						LevelActor->SetActorScale3D(FVector(1, LevelActor->GetActorScale3D().Y, LevelActor->GetActorScale3D().Z));
+						break;
+					case RESET_Y:
+						LevelActor->SetActorScale3D(FVector(LevelActor->GetActorScale3D().X, 1, LevelActor->GetActorScale3D().Z));
+						break;
+					case RESET_Z:
+						LevelActor->SetActorScale3D(FVector(LevelActor->GetActorScale3D().X, LevelActor->GetActorScale3D().Y, 1));
+						break;
+					case RESET_ALL:
+						LevelActor->SetActorScale3D(FVector::OneVector);
+						break;
+					default:
+						break;
+					}
+				}
+			}
+			GEditor->EndTransaction();
+
+			return FReply::Handled();
+		}
+
+		static TSharedRef<SWidget> MakeButtonRandom(FText InLabel, const Axe axe, FPluginForLevelDesignEdModeToolkit* plugin)
 		{
 			return SNew(SButton)
 				.Text(InLabel)
-				.OnClicked_Static(&Locals::OnButtonClickRandom, axe);
+				.OnClicked_Static(&Locals::OnButtonClickRandom, axe,plugin);
 		}
 
 		static TSharedRef<SWidget> MakeButtonSnapping(FText InLabel, const SnapToAxe snap)
@@ -405,9 +466,17 @@ void FPluginForLevelDesignEdModeToolkit::Init(const TSharedPtr<IToolkitHost>& In
 				.Text(InLabel)
 				.OnClicked_Static(&Locals::OnButtonClickSnap, snap);
 		}
+
+		static TSharedRef<SWidget> MakeButtonScale(FText InLabel, const Axe scale, FPluginForLevelDesignEdModeToolkit* plugin)
+		{
+			return SNew(SButton)
+				.Text(InLabel)
+				.OnClicked_Static(&Locals::OnButtonClickScale, scale, plugin);
+		}
 	};
 
 	//const float Factor = 256.0f;
+
 
 	SAssignNew(ToolkitWidget, SBorder)
 
@@ -589,6 +658,69 @@ void FPluginForLevelDesignEdModeToolkit::Init(const TSharedPtr<IToolkitHost>& In
 			Locals::MakeButton(LOCTEXT("Reset", "Reset"), PivotType::RESET)
 		]
 	+ SVerticalBox::Slot()
+		.AutoHeight()
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+		[
+			SNew(STextBlock)
+			.ColorAndOpacity(FSlateColor(FLinearColor::White))
+		.Text(FText::FromString(TEXT("Choose the minimum and the maximum of the rotation")))
+		]
+		]
+	+ SVerticalBox::Slot()
+		.AutoHeight()
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+		[
+			SNew(STextBlock)
+			.ColorAndOpacity(FSlateColor(FLinearColor::White))
+		.Text(FText::FromString(TEXT("Minimum Rotation")))
+		] 
+	+ SHorizontalBox::Slot()
+		[
+			SNew(STextBlock)
+			.ColorAndOpacity(FSlateColor(FLinearColor::White))
+		.Text(FText::FromString(TEXT("Maximum Rotation")))
+		]
+		]
+	+ SVerticalBox::Slot()
+		.AutoHeight()
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+		[
+			SNew(SSpinBox<float>)
+			.MinValue(0)
+		.MaxValue(360)
+		.MinSliderValue(0)
+		.MaxSliderValue(360)
+		.Value(0)
+		.OnValueChanged_Lambda([=](float NewValue)
+			{
+				//FString TheFloatStr = FString::SanitizeFloat(NewValue, 2);
+				//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Magenta, TheFloatStr);
+				ChangeValueMinRot(NewValue);
+			})
+		]
+			+ SHorizontalBox::Slot()
+		[
+			SNew(SSpinBox<float>)
+			.MinValue(0)
+		.MaxValue(360)
+		.MinSliderValue(0)
+		.MaxSliderValue(360)
+		.Value(360)
+		.OnValueChanged_Lambda([=](float NewValue)
+			{
+				//FString TheFloatStr = FString::SanitizeFloat(NewValue, 2);
+				//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Magenta, TheFloatStr);
+				ChangeValueMaxRot(NewValue);
+			})
+		]
+		]
+	+ SVerticalBox::Slot()
 		.MaxHeight(2)
 		+ SVerticalBox::Slot()
 		.AutoHeight()
@@ -597,20 +729,20 @@ void FPluginForLevelDesignEdModeToolkit::Init(const TSharedPtr<IToolkitHost>& In
 			SNew(SHorizontalBox)
 			+ SHorizontalBox::Slot()
 		[
-			Locals::MakeButtonRandom(LOCTEXT("Rand X", "Rand X"), AXE_X)
+			Locals::MakeButtonRandom(LOCTEXT("Rand X", "Rand X"), AXE_X,this)
 		]
 	+ SHorizontalBox::Slot()
 		[
-			Locals::MakeButtonRandom(LOCTEXT("Rand Y", "Rand Y"), AXE_Y)
+			Locals::MakeButtonRandom(LOCTEXT("Rand Y", "Rand Y"), AXE_Y,this)
 		]
 
 	+ SHorizontalBox::Slot()
 		[
-			Locals::MakeButtonRandom(LOCTEXT("Rand Z", "Rand Z"), AXE_Z)
+			Locals::MakeButtonRandom(LOCTEXT("Rand Z", "Rand Z"), AXE_Z,this)
 		]
 	+ SHorizontalBox::Slot()
 		[
-			Locals::MakeButtonRandom(LOCTEXT("Rand All", "Rand All"), ALL_AXE)
+			Locals::MakeButtonRandom(LOCTEXT("Rand All", "Rand All"), ALL_AXE,this)
 		]
 		]
 	+ SVerticalBox::Slot()
@@ -620,20 +752,20 @@ void FPluginForLevelDesignEdModeToolkit::Init(const TSharedPtr<IToolkitHost>& In
 			SNew(SHorizontalBox)
 			+ SHorizontalBox::Slot()
 		[
-			Locals::MakeButtonRandom(LOCTEXT("Reset X", "Reset X"), RESET_X)
+			Locals::MakeButtonRandom(LOCTEXT("Reset X", "Reset X"), RESET_X,this)
 		]
 	+ SHorizontalBox::Slot()
 		[
-			Locals::MakeButtonRandom(LOCTEXT("Reset Y", "Reset Y"), RESET_Y)
+			Locals::MakeButtonRandom(LOCTEXT("Reset Y", "Reset Y"), RESET_Y,this)
 		]
 
 	+ SHorizontalBox::Slot()
 		[
-			Locals::MakeButtonRandom(LOCTEXT("Reset Z", "Reset Z"), RESET_Z)
+			Locals::MakeButtonRandom(LOCTEXT("Reset Z", "Reset Z"), RESET_Z,this)
 		]
 	+ SHorizontalBox::Slot()
 		[
-			Locals::MakeButtonRandom(LOCTEXT("Reset All", "Reset All"), RESET_ALL)
+			Locals::MakeButtonRandom(LOCTEXT("Reset All", "Reset All"), RESET_ALL,this)
 		]
 		]
 	+ SVerticalBox::Slot()
@@ -677,16 +809,86 @@ void FPluginForLevelDesignEdModeToolkit::Init(const TSharedPtr<IToolkitHost>& In
 		]
 
 		]
-//	+SVerticalBox::Slot()
-//.AutoHeight()
-//[
-//	SNew(SCheckBox)
-//	.ToolTipText(ToolkitWidget)
-//.Type(ESlateCheckBoxType::CheckBox)
-//._IsChecked
-//]
+	+ SVerticalBox::Slot()
+		.AutoHeight()
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+		[
+			SNew(STextBlock)
+			.ColorAndOpacity(FSlateColor(FLinearColor::White))
+		.Text(FText::FromString(TEXT("Use this to change the value for the scale, between 0 and 100")))
+		]
+		]
+	+ SVerticalBox::Slot()
+		.AutoHeight()
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+		[
+			SNew(SSpinBox<float>)
+			.MinValue(0)
+		.MaxValue(100)
+		.MinSliderValue(0)
+		.MaxSliderValue(100)
+		.Value(0)
+		.OnValueChanged_Lambda([=](float NewValue)
+			{
+				//FString TheFloatStr = FString::SanitizeFloat(NewValue, 2);
+				//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Magenta, TheFloatStr);
+				ChangeValueScale(NewValue);
+			})
+		]
+		]
+	+ SVerticalBox::Slot()
+		.AutoHeight()
+
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+		[
+			Locals::MakeButtonScale(LOCTEXT("Scale X", "Scale X"), AXE_X, this)
+		]
+	+ SHorizontalBox::Slot()
+		[
+			Locals::MakeButtonScale(LOCTEXT("Scale Y", "Scale Y"), AXE_Y, this)
+		]
+	+ SHorizontalBox::Slot()
+		[
+			Locals::MakeButtonScale(LOCTEXT("Scale Z", "Scale Z"), AXE_Z, this)
+		]
+	+ SHorizontalBox::Slot()
+		[
+			Locals::MakeButtonScale(LOCTEXT("Scale All", "Scale All"), ALL_AXE, this)
+		]
+
+		]
+	+ SVerticalBox::Slot()
+		.AutoHeight()
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+		[
+			Locals::MakeButtonScale(LOCTEXT("Reset X", "Reset X"), RESET_X, this)
+		]
+	+ SHorizontalBox::Slot()
+		[
+			Locals::MakeButtonScale(LOCTEXT("Reset Y", "Reset Y"), RESET_Y, this)
+		]
+	+ SHorizontalBox::Slot()
+		[
+			Locals::MakeButtonScale(LOCTEXT("Reset Z", "Reset Z"), RESET_Z, this)
+		]
+	+ SHorizontalBox::Slot()
+		[
+			Locals::MakeButtonScale(LOCTEXT("Reset All", "Reset All"), RESET_ALL, this)
+		]
+
+		]
+
 		];
-	
+
+
 	FModeToolkit::Init(InitToolkitHost);
 }
 
@@ -703,6 +905,22 @@ FText FPluginForLevelDesignEdModeToolkit::GetBaseToolkitName() const
 class FEdMode* FPluginForLevelDesignEdModeToolkit::GetEditorMode() const
 {
 	return GLevelEditorModeTools().GetActiveMode(FPluginForLevelDesignEdMode::EM_PluginForLevelDesignEdModeId);
+}
+
+void FPluginForLevelDesignEdModeToolkit::ChangeValueScale(float _Value)
+{
+	Float_Scale = _Value;
+}
+
+void FPluginForLevelDesignEdModeToolkit::ChangeValueMinRot(float _Value)
+{
+	Float_MinRot = _Value;
+}
+
+void FPluginForLevelDesignEdModeToolkit::ChangeValueMaxRot(float _Value)
+{
+	Float_MaxRot = _Value;
+
 }
 
 #undef LOCTEXT_NAMESPACE
